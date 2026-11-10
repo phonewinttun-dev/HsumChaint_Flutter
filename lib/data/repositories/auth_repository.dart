@@ -13,76 +13,88 @@ class AuthRepository {
     return error.toString();
   }
 
-  Future<(Failure?, UserModel?)> login(String identifier, String password) async {
+  Future<(Failure?, UserModel?)> _handleSessionResponse(
+    dynamic response,
+  ) async {
     final api = Get.find<ApiService>();
+    final session = Map<String, dynamic>.from(response.data['data']);
+    if (session['roleId'] != 2 && session['roleId'] != 3) {
+      return (
+        const ValidationFailure(
+          'ဤ app သည် အလှူရှင်နှင့် သံဃာတော်များအတွက်သာ ဖြစ်ပါသည်။',
+        ),
+        null,
+      );
+    }
+    final id = (session['id'] ?? session['ID']) as int;
+    api.setSession(session['accessToken'], session['refreshToken'], id);
+    final profile = await _provider.getProfile(id);
+    return (
+      null,
+      UserModel.fromJson({
+        ...Map<String, dynamic>.from(profile.data['data']),
+        ...session,
+      }),
+    );
+  }
+
+  Future<(Failure?, UserModel?)> login(String identifier, String password) async {
     try {
       final response = await _provider.login(identifier, password);
-      final session = Map<String, dynamic>.from(response.data['data']);
-      if (session['roleId'] != 2 && session['roleId'] != 3) {
-        return (
-          const ValidationFailure(
-            'ဤ app သည် အလှူရှင်နှင့် သံဃာတော်များအတွက်သာ ဖြစ်ပါသည်။',
-          ),
-          null,
-        );
-      }
-      final id = (session['id'] ?? session['ID']) as int;
-      api.setSession(session['accessToken'], session['refreshToken'], id);
-      final profile = await _provider.getProfile(id);
-      return (
-        null,
-        UserModel.fromJson({
-          ...Map<String, dynamic>.from(profile.data['data']),
-          ...session,
-        }),
-      );
+      return await _handleSessionResponse(response);
     } catch (e) {
-      api.clearSession();
+      Get.find<ApiService>().clearSession();
       return (ServerFailure(_errorMessage(e)), null);
     }
   }
 
-  Future<(Failure?, bool)> signupUser({
+  Future<(Failure?, UserModel?)> signupUser({
     String? phone,
     required String username,
     required String password,
     required String email,
     String? contactPhone,
+    String? otp,
   }) async {
     try {
-      await _provider.signupUser(
+      final response = await _provider.signupUser(
         phone: phone,
         username: username,
         password: password,
         email: email,
         contactPhone: contactPhone,
+        otp: otp,
       );
-      return (null, true);
+      return await _handleSessionResponse(response);
     } catch (e) {
-      return (ServerFailure(_errorMessage(e)), false);
+      Get.find<ApiService>().clearSession();
+      return (ServerFailure(_errorMessage(e)), null);
     }
   }
 
-  Future<(Failure?, bool)> signupMonk({
+  Future<(Failure?, UserModel?)> signupMonk({
     String? phone,
     required String username,
     required String password,
     required String monasteryName,
     required String monasteryAddress,
     required String email,
+    String? otp,
   }) async {
     try {
-      await _provider.signupMonk(
+      final response = await _provider.signupMonk(
         phone: phone,
         username: username,
         password: password,
         monasteryName: monasteryName,
         monasteryAddress: monasteryAddress,
         email: email,
+        otp: otp,
       );
-      return (null, true);
+      return await _handleSessionResponse(response);
     } catch (e) {
-      return (ServerFailure(_errorMessage(e)), false);
+      Get.find<ApiService>().clearSession();
+      return (ServerFailure(_errorMessage(e)), null);
     }
   }
 

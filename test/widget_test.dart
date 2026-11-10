@@ -139,6 +139,46 @@ void main() {
     expect(adapter.requests[1].data.containsKey('monastery_name'), isFalse);
   });
 
+  test('register with otp includes otp in payload', () async {
+    final adapter = FakeAdapter((request) => ok(null));
+    Get.put(service(adapter));
+    final provider = AuthProvider();
+    await provider.signupUser(
+      email: 'donor@example.com',
+      username: 'Donor',
+      password: 'secret',
+      otp: '123456',
+    );
+    expect(adapter.requests[0].path, '/api/v1/auth/register');
+    expect(adapter.requests[0].data['otp'], '123456');
+  });
+
+  test('registration auto-login unwraps session and establishes user', () async {
+    final adapter = FakeAdapter((request) {
+      if (request.path == '/api/v1/auth/register') return ok(session);
+      expect(request.path, '/api/v1/user/7');
+      expect(request.headers['Authorization'], 'Bearer access');
+      return ok({
+        'id': 7,
+        'name': 'အလှူရှင်သစ်',
+        'email': 'newdonor@example.com',
+        'roleId': 3,
+      });
+    });
+    Get.put(service(adapter));
+    final repo = AuthRepository(AuthProvider());
+    final (failure, user) = await repo.signupUser(
+      email: 'newdonor@example.com',
+      username: 'အလှူရှင်သစ်',
+      password: 'secret',
+      otp: '123456',
+    );
+    expect(failure, isNull);
+    expect(user, isNotNull);
+    expect(user!.name, 'အလှူရှင်သစ်');
+    expect(user.token, 'access');
+  });
+
   test('admin accounts are not admitted to mobile', () async {
     final adapter = FakeAdapter((_) => ok({...session, 'roleId': 1}));
     Get.put(service(adapter));

@@ -54,6 +54,7 @@ class AppRouter {
             destination: extra?['destination'] as String? ?? '',
             purpose: extra?['purpose'] as String? ?? 'VERIFY_EMAIL',
             channel: extra?['channel'] as String? ?? 'EMAIL',
+            isMonk: extra?['isMonk'] as bool? ?? false,
           );
         },
       ),

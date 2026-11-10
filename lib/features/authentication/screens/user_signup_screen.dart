@@ -80,23 +80,27 @@ class UserSignUpScreen extends GetView<AuthController> {
       return;
     }
 
-    final success = await controller.signupUser();
-    if (!context.mounted) return;
-
-    if (success) {
-      await controller.requestOtp(
+    controller.isLoading.value = true;
+    try {
+      final otpSent = await controller.requestOtp(
         destination: email,
         channel: 'EMAIL',
         purpose: 'VERIFY_EMAIL',
       );
       if (!context.mounted) return;
-      context.push(
-        AppRoutes.optPath,
-        extra: {
-          'destination': email,
-          'purpose': 'VERIFY_EMAIL',
-        },
-      );
+
+      if (otpSent) {
+        context.push(
+          AppRoutes.optPath,
+          extra: {
+            'destination': email,
+            'purpose': 'REGISTER',
+            'isMonk': false,
+          },
+        );
+      }
+    } finally {
+      controller.isLoading.value = false;
     }
   }
 

@@ -14,11 +14,13 @@ class OtpVerificationScreen extends StatefulWidget {
     required this.destination,
     this.purpose = 'VERIFY_EMAIL',
     this.channel = 'EMAIL',
+    this.isMonk = false,
   });
 
   final String destination;
   final String purpose;
   final String channel;
+  final bool isMonk;
 
   @override
   State<OtpVerificationScreen> createState() => _OtpVerificationScreenState();
@@ -97,6 +99,18 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
       return;
     }
 
+    if (widget.purpose == 'REGISTER') {
+      _authController.completeRegistration(
+        otp: _otp,
+        isMonk: widget.isMonk,
+      ).then((success) {
+        if (success && mounted) {
+          context.go('/calendar');
+        }
+      });
+      return;
+    }
+
     _authController.verifyOtp(
       destination: widget.destination,
       channel: widget.channel,
@@ -123,10 +137,12 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
 
     _startTimer();
 
+    final purpose =
+        widget.purpose == 'REGISTER' ? 'VERIFY_EMAIL' : widget.purpose;
     _authController.resendOtp(
       destination: widget.destination,
       channel: widget.channel,
-      purpose: widget.purpose,
+      purpose: purpose,
     );
   }
 

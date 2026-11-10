@@ -210,7 +210,7 @@ class AuthController extends GetxController {
     }
   }
 
-  Future<bool> signupUser() async {
+  Future<bool> signupUser({String? otp}) async {
     // Hide keyboard
     FocusManager.instance.primaryFocus?.unfocus();
     isLoading.value = true;
@@ -221,17 +221,18 @@ class AuthController extends GetxController {
     final phone = phoneController.text.trim();
     final contactPhone = contactPhoneController.text.trim();
 
-    final (failure, ok) = await _authRepository.signupUser(
+    final (failure, user) = await _authRepository.signupUser(
       phone: phone.isEmpty ? null : phone,
       username: username,
       password: password,
       email: email,
       contactPhone: contactPhone.isEmpty ? null : contactPhone,
+      otp: otp,
     );
 
     isLoading.value = false;
 
-    if (failure != null || !ok) {
+    if (failure != null || user == null) {
       DialogHelper.showErrorSnackbar(
         title: 'Signup Failed',
         message: failure?.message ?? 'Unable to create your account.',
@@ -239,14 +240,16 @@ class AuthController extends GetxController {
       return false;
     }
 
+    currentUser.value = user;
+    clearControllers();
     DialogHelper.showSuccessSnackbar(
       title: 'အကောင့်ဖွင့်ပြီးပါပြီ',
-      message: 'အီးမေးလ်နှင့် စကားဝှက်ဖြင့် ဝင်ရောက်ပါ။',
+      message: 'ကြိုဆိုပါသည် ${user.name}!',
     );
     return true;
   }
 
-  Future<bool> signupMonk() async {
+  Future<bool> signupMonk({String? otp}) async {
     // Hide keyboard
     FocusManager.instance.primaryFocus?.unfocus();
     isLoading.value = true;
@@ -258,18 +261,19 @@ class AuthController extends GetxController {
     final monasteryAddress = monasteryAddressController.text.trim();
     final phone = phoneController.text.trim();
 
-    final (failure, ok) = await _authRepository.signupMonk(
+    final (failure, user) = await _authRepository.signupMonk(
       phone: phone.isEmpty ? null : phone,
       username: username,
       password: password,
       monasteryName: monasteryName,
       monasteryAddress: monasteryAddress,
       email: email,
+      otp: otp,
     );
 
     isLoading.value = false;
 
-    if (failure != null || !ok) {
+    if (failure != null || user == null) {
       DialogHelper.showErrorSnackbar(
         title: 'Signup Failed',
         message: failure?.message ?? 'Unable to create your account.',
@@ -277,11 +281,20 @@ class AuthController extends GetxController {
       return false;
     }
 
+    currentUser.value = user;
+    clearControllers();
     DialogHelper.showSuccessSnackbar(
       title: 'အကောင့်ဖွင့်ပြီးပါပြီ',
-      message: 'အီးမေးလ်နှင့် စကားဝှက်ဖြင့် ဝင်ရောက်ပါ။',
+      message: 'ကြိုဆိုပါသည် ${user.name}!',
     );
     return true;
+  }
+
+  Future<bool> completeRegistration({
+    required String otp,
+    required bool isMonk,
+  }) async {
+    return isMonk ? await signupMonk(otp: otp) : await signupUser(otp: otp);
   }
 
   void logout() {
@@ -332,6 +345,16 @@ class AuthController extends GetxController {
     isOtpLoading.value = false;
 
     if (failure != null || !ok) {
+      final msg = failure?.message ?? '';
+      if (msg.toLowerCase().contains('wait before requesting another otp')) {
+        DialogHelper.showSuccessSnackbar(
+          title: 'ကုဒ် ပို့ထားပြီး ဖြစ်ပါသည်',
+          message:
+              '$destination သို့ အတည်ပြုကုဒ် ပို့ထားပြီး ဖြစ်ပါသည်။ အီးမေးလ်ထဲမှ ကုဒ်ကို ရိုက်ထည့်ပေးပါ။',
+        );
+        return true;
+      }
+
       DialogHelper.showErrorSnackbar(
         title: 'ကုဒ် ပို့မရပါ',
         message: failure?.message ?? 'အတည်ပြုကုဒ် ပေးပို့၍ မရသေးပါ။',
@@ -396,9 +419,13 @@ class AuthController extends GetxController {
     );
 
     if (failure != null || !success) {
+      final msg = failure?.message ?? '';
+      final displayMessage = msg.toLowerCase().contains('wait before requesting another otp')
+          ? 'ကျေးဇူးပြု၍ ခဏစောင့်ပြီးမှ နောက်တစ်ကြိမ် ကုဒ်ပြန်တောင်းပေးပါ။'
+          : (failure?.message ?? 'လောလောဆယ် ကုဒ်ပြန်ပို့၍ မရသေးပါ။');
       DialogHelper.showErrorSnackbar(
         title: 'ပြန်ပို့ မအောင်မြင်ပါ',
-        message: failure?.message ?? 'လောလောဆယ် ကုဒ်ပြန်ပို့၍ မရသေးပါ။',
+        message: displayMessage,
       );
     } else {
       DialogHelper.showSuccessSnackbar(

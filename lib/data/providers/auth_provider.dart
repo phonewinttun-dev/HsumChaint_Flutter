@@ -16,6 +16,7 @@ class AuthProvider {
     required String password,
     required String email,
     String? contactPhone,
+    String? otp,
   }) => _api.post(
     '/api/v1/auth/register',
     data: {
@@ -26,6 +27,7 @@ class AuthProvider {
       'email': email,
       if (contactPhone != null && contactPhone.isNotEmpty)
         'contactPhoneNumber': contactPhone,
+      if (otp != null && otp.isNotEmpty) 'otp': otp,
     },
   );
 
@@ -36,6 +38,7 @@ class AuthProvider {
     required String monasteryName,
     required String monasteryAddress,
     required String email,
+    String? otp,
   }) => _api.post(
     '/api/v1/auth/register',
     data: {
@@ -46,6 +49,7 @@ class AuthProvider {
       'monasteryName': monasteryName,
       'monasteryAddress': monasteryAddress,
       'email': email,
+      if (otp != null && otp.isNotEmpty) 'otp': otp,
     },
   );
 

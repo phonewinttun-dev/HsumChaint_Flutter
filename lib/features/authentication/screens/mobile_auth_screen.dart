@@ -193,20 +193,25 @@ class _MobileAuthScreenState extends State<MobileAuthScreen> {
                     ],
                   ],
                   Obx(
-                    () => FilledButton(
-                      onPressed: auth.isLoading.value ? null : _submit,
-                      child: auth.isLoading.value
-                          ? const SizedBox(
-                              width: 20,
-                              height: 20,
-                              child: CircularProgressIndicator(strokeWidth: 2),
-                            )
-                          : Text(
-                              widget.register
-                                  ? 'အကောင့်ဖွင့်ရန်'
-                                  : 'ဝင်ရောက်ရန်',
-                            ),
-                    ),
+                    () {
+                      final busy =
+                          auth.isLoading.value || auth.isOtpLoading.value;
+                      return FilledButton(
+                        onPressed: busy ? null : _submit,
+                        child: busy
+                            ? const SizedBox(
+                                width: 20,
+                                height: 20,
+                                child:
+                                    CircularProgressIndicator(strokeWidth: 2),
+                              )
+                            : Text(
+                                widget.register
+                                    ? 'အကောင့်ဖွင့်ရန်'
+                                    : 'ဝင်ရောက်ရန်',
+                              ),
+                      );
+                    },
                   ),
                   const SizedBox(height: 28),
                 ],
@@ -245,29 +250,26 @@ class _MobileAuthScreenState extends State<MobileAuthScreen> {
       await auth.login();
       return;
     }
-    final email = auth.emailController.text.trim();
-    final success = _monk ? await auth.signupMonk() : await auth.signupUser();
-    if (success && mounted) {
-      if (email.isNotEmpty && email.contains('@')) {
-        await auth.requestOtp(
-          destination: email,
-          channel: 'EMAIL',
-          purpose: 'VERIFY_EMAIL',
+    auth.isLoading.value = true;
+    try {
+      final email = auth.emailController.text.trim();
+      final otpSent = await auth.requestOtp(
+        destination: email,
+        channel: 'EMAIL',
+        purpose: 'VERIFY_EMAIL',
+      );
+      if (otpSent && mounted) {
+        context.push(
+          AppRoutes.optPath,
+          extra: {
+            'destination': email,
+            'purpose': 'REGISTER',
+            'isMonk': _monk,
+          },
         );
-        auth.clearControllers();
-        if (mounted) {
-          context.push(
-            AppRoutes.optPath,
-            extra: {
-              'destination': email,
-              'purpose': 'VERIFY_EMAIL',
-            },
-          );
-        }
-      } else {
-        auth.clearControllers();
-        context.go('/login');
       }
+    } finally {
+      auth.isLoading.value = false;
     }
   }
 }
